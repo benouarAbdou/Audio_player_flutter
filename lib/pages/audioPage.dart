@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import 'dart:io';
-
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
@@ -8,17 +8,15 @@ import 'package:on_audio_query/on_audio_query.dart';
 import 'package:uri_to_file/uri_to_file.dart';
 
 class AudioPage extends StatefulWidget {
-  final String singerName;
-  final String songName;
-  final SongModel song;
+  final List<SongModel> songs;
+  final int currentIndex;
   final String path;
 
   const AudioPage({
     Key? key,
-    required this.song,
+    required this.songs,
+    required this.currentIndex,
     required this.path,
-    required this.singerName,
-    required this.songName,
   }) : super(key: key);
 
   @override
@@ -28,16 +26,22 @@ class AudioPage extends StatefulWidget {
 class _AudioPageState extends State<AudioPage> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool isPlaying = false;
+  bool isShuffled = false;
+  bool isReplayOnce = false;
   Duration duration = Duration.zero;
   Duration position = Duration.zero;
   Uint8List? image;
+  late int currentIndex;
+  late List<SongModel> shuffledSongs;
 
   @override
   void initState() {
     super.initState();
-    art(); // Call the async method to fetch image data
-    print(widget.song.duration);
-    // Set up the listeners
+    currentIndex = widget.currentIndex;
+    shuffledSongs = List.from(widget.songs);
+    playPauseAudio();
+    art();
+
     _audioPlayer.onDurationChanged.listen((newDuration) {
       setState(() {
         duration = newDuration;
@@ -49,13 +53,21 @@ class _AudioPageState extends State<AudioPage> {
         position = newPosition;
       });
     });
+
+    _audioPlayer.onPlayerComplete.listen((event) {
+      if (isReplayOnce) {
+        replayCurrentSong();
+      } else {
+        nextSong();
+      }
+    });
   }
 
   void art() async {
     try {
       OnAudioQuery audioQuery = OnAudioQuery();
       Uint8List? imageData = await audioQuery.queryArtwork(
-        widget.song.id,
+        shuffledSongs[currentIndex].id,
         ArtworkType.AUDIO,
       );
       setState(() {
@@ -77,9 +89,8 @@ class _AudioPageState extends State<AudioPage> {
       if (isPlaying) {
         await _audioPlayer.pause();
       } else {
-        File file = await toFile(widget.path);
+        File file = await toFile(shuffledSongs[currentIndex].uri!);
         print("path : ${file.path}");
-        // Assuming widget.path is a valid URI or file path
         await _audioPlayer.play(DeviceFileSource(file.path));
       }
       setState(() {
@@ -87,10 +98,8 @@ class _AudioPageState extends State<AudioPage> {
       });
     } on PlatformException catch (e) {
       print('PlatformException: ${e.message}');
-      // Handle specific platform exceptions if needed
     } catch (e) {
       print('Error playing audio: $e');
-      // Handle other exceptions
     }
   }
 
@@ -99,11 +108,75 @@ class _AudioPageState extends State<AudioPage> {
     _audioPlayer.seek(position);
   }
 
+  void nextSong() {
+    setState(() {
+      currentIndex = (currentIndex + 1) % shuffledSongs.length;
+      isPlaying = false; // Reset playing status
+    });
+    playPauseAudio();
+    art();
+  }
+
+  void previousSong() {
+    setState(() {
+      currentIndex =
+          (currentIndex - 1 + shuffledSongs.length) % shuffledSongs.length;
+      isPlaying = false; // Reset playing status
+    });
+    playPauseAudio();
+    art();
+  }
+
+  void shuffleSongs() {
+    setState(() {
+      isShuffled = !isShuffled;
+      if (isShuffled) {
+        // Remove the current song from the list
+        SongModel currentSong = shuffledSongs[currentIndex];
+        shuffledSongs.removeAt(currentIndex);
+
+        // Shuffle the remaining songs
+        shuffledSongs.shuffle();
+
+        // Insert the current song back to its original position
+        shuffledSongs.insert(0, currentSong);
+        currentIndex = 0;
+      } else {
+        SongModel currentSong = shuffledSongs[currentIndex];
+        shuffledSongs = List.from(widget.songs);
+        currentIndex =
+            shuffledSongs.indexWhere((song) => song.id == currentSong.id);
+      }
+    });
+  }
+
+  void replayCurrentSong() {
+    setState(() {
+      isPlaying = false; // Reset playing status
+      isReplayOnce = false;
+    });
+    _audioPlayer.seek(Duration.zero);
+    playPauseAudio();
+  }
+
+  void toggleReplayOnce() {
+    setState(() {
+      isReplayOnce = !isReplayOnce;
+      print(isReplayOnce);
+    });
+  }
+
   String formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(duration.inHours);
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$minutes:$seconds';
+
+    if (duration.inHours > 0) {
+      return '$hours:$minutes:$seconds';
+    } else {
+      return '$minutes:$seconds';
+    }
   }
 
   @override
@@ -129,11 +202,9 @@ class _AudioPageState extends State<AudioPage> {
                   color: Colors.redAccent,
                   shape: BoxShape.circle),
             ),
-            const SizedBox(
-              height: 10,
-            ),
+            const SizedBox(height: 10),
             Text(
-              widget.songName,
+              shuffledSongs[currentIndex].title,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white,
@@ -141,19 +212,15 @@ class _AudioPageState extends State<AudioPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(
-              height: 5,
-            ),
+            const SizedBox(height: 5),
             Text(
-              widget.singerName,
+              shuffledSongs[currentIndex].artist ?? 'Unknown Artist',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,
               ),
             ),
-            const SizedBox(
-              height: 10,
-            ),
+            const SizedBox(height: 10),
             Slider(
               activeColor: Colors.red,
               inactiveColor: Colors.white,
@@ -180,21 +247,25 @@ class _AudioPageState extends State<AudioPage> {
                 ),
               ],
             ),
-            const SizedBox(
-              height: 20,
-            ),
+            const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(
-                  Icons.shuffle_rounded,
-                  color: Colors.white,
-                  size: 24,
+                GestureDetector(
+                  onTap: shuffleSongs,
+                  child: Icon(
+                    Icons.shuffle_rounded,
+                    color: isShuffled ? Colors.red : Colors.white,
+                    size: 24,
+                  ),
                 ),
-                const Icon(
-                  Icons.skip_previous_rounded,
-                  color: Colors.white,
-                  size: 24,
+                GestureDetector(
+                  onTap: previousSong,
+                  child: const Icon(
+                    Icons.skip_previous_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
                 GestureDetector(
                   onTap: playPauseAudio,
@@ -213,15 +284,21 @@ class _AudioPageState extends State<AudioPage> {
                     ),
                   ),
                 ),
-                const Icon(
-                  Icons.skip_next_rounded,
-                  color: Colors.white,
-                  size: 24,
+                GestureDetector(
+                  onTap: nextSong,
+                  child: const Icon(
+                    Icons.skip_next_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
-                const Icon(
-                  Icons.replay_rounded,
-                  color: Colors.white,
-                  size: 24,
+                GestureDetector(
+                  onTap: toggleReplayOnce,
+                  child: Icon(
+                    Icons.replay_rounded,
+                    color: isReplayOnce ? Colors.red : Colors.white,
+                    size: 24,
+                  ),
                 ),
               ],
             ),

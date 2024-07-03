@@ -37,7 +37,6 @@ class _HomePageState extends State<HomePage> {
       _loading = true;
     });
 
-    // Query all audio files
     List<SongModel> songs = await _audioQuery.querySongs(
       sortType: SongSortType.TITLE,
       orderType: OrderType.ASC_OR_SMALLER,
@@ -45,7 +44,6 @@ class _HomePageState extends State<HomePage> {
       ignoreCase: true,
     );
 
-    // Filter out non-song audio files (you may adjust this based on your criteria)
     List<SongModel> filteredSongs =
         songs.where((song) => song.duration! > 60000).toList();
 
@@ -98,7 +96,10 @@ class _HomePageState extends State<HomePage> {
                       itemCount: _songs.length,
                       itemBuilder: (context, index) {
                         var song = _songs[index];
-                        return AudioBox(song: song, path: song.uri!);
+                        return AudioBox(
+                          songs: _songs,
+                          currentIndex: index,
+                        );
                       },
                     ),
             )
@@ -110,27 +111,27 @@ class _HomePageState extends State<HomePage> {
 }
 
 class AudioBox extends StatelessWidget {
-  final SongModel song;
-  final String path;
+  final List<SongModel> songs;
+  final int currentIndex;
 
   const AudioBox({
     super.key,
-    required this.song,
-    required this.path,
+    required this.songs,
+    required this.currentIndex,
   });
 
   @override
   Widget build(BuildContext context) {
+    var song = songs[currentIndex];
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => AudioPage(
-              song: song,
-              path: path,
-              singerName: song.artist!,
-              songName: song.title,
+              songs: songs,
+              currentIndex: currentIndex,
+              path: song.uri!,
             ),
           ),
         );
