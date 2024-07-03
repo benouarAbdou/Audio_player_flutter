@@ -25,7 +25,7 @@ class AudioPage extends StatefulWidget {
 
 class _AudioPageState extends State<AudioPage> {
   final AudioPlayer _audioPlayer = AudioPlayer();
-  bool isPlaying = false;
+  bool isPlaying = true;
   bool isShuffled = false;
   bool isReplayOnce = false;
   Duration duration = Duration.zero;
@@ -39,7 +39,7 @@ class _AudioPageState extends State<AudioPage> {
     super.initState();
     currentIndex = widget.currentIndex;
     shuffledSongs = List.from(widget.songs);
-    playPauseAudio();
+    playAudio();
     art();
 
     _audioPlayer.onDurationChanged.listen((newDuration) {
@@ -84,14 +84,18 @@ class _AudioPageState extends State<AudioPage> {
     super.dispose();
   }
 
+  void playAudio() async {
+    File file = await toFile(shuffledSongs[currentIndex].uri!);
+    print("path : ${file.path}");
+    await _audioPlayer.play(DeviceFileSource(file.path));
+  }
+
   void playPauseAudio() async {
     try {
       if (isPlaying) {
         await _audioPlayer.pause();
       } else {
-        File file = await toFile(shuffledSongs[currentIndex].uri!);
-        print("path : ${file.path}");
-        await _audioPlayer.play(DeviceFileSource(file.path));
+        _audioPlayer.resume();
       }
       setState(() {
         isPlaying = !isPlaying;
@@ -111,9 +115,9 @@ class _AudioPageState extends State<AudioPage> {
   void nextSong() {
     setState(() {
       currentIndex = (currentIndex + 1) % shuffledSongs.length;
-      isPlaying = false; // Reset playing status
+      isPlaying = true; // Reset playing status
     });
-    playPauseAudio();
+    playAudio();
     art();
   }
 
@@ -121,9 +125,9 @@ class _AudioPageState extends State<AudioPage> {
     setState(() {
       currentIndex =
           (currentIndex - 1 + shuffledSongs.length) % shuffledSongs.length;
-      isPlaying = false; // Reset playing status
+      isPlaying = true; // Reset playing status
     });
-    playPauseAudio();
+    playAudio();
     art();
   }
 
@@ -152,11 +156,11 @@ class _AudioPageState extends State<AudioPage> {
 
   void replayCurrentSong() {
     setState(() {
-      isPlaying = false; // Reset playing status
+      isPlaying = true; // Reset playing status
       isReplayOnce = false;
     });
     _audioPlayer.seek(Duration.zero);
-    playPauseAudio();
+    playAudio();
   }
 
   void toggleReplayOnce() {
