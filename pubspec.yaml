@@ -43,6 +43,7 @@ dependencies:
   on_audio_query: ^2.9.0
   flutter_file_dialog: ^3.0.2
   uri_to_file: ^1.0.0
+  flutter_local_notifications: ^17.2.1
 
 dev_dependencies:
   flutter_test:

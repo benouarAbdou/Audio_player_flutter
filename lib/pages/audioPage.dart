@@ -1,9 +1,11 @@
 import 'dart:typed_data';
 import 'dart:io';
 import 'dart:math';
+import 'package:audio_player/main.dart';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:uri_to_file/uri_to_file.dart';
 
@@ -37,6 +39,7 @@ class _AudioPageState extends State<AudioPage> {
   @override
   void initState() {
     super.initState();
+
     currentIndex = widget.currentIndex;
     shuffledSongs = List.from(widget.songs);
     playAudio();
@@ -61,6 +64,8 @@ class _AudioPageState extends State<AudioPage> {
         nextSong();
       }
     });
+
+    showNotification();
   }
 
   void art() async {
@@ -81,6 +86,8 @@ class _AudioPageState extends State<AudioPage> {
   @override
   void dispose() {
     _audioPlayer.dispose();
+    cancelNotification(); // Cancel the notification when app is disposed
+
     super.dispose();
   }
 
@@ -107,6 +114,37 @@ class _AudioPageState extends State<AudioPage> {
     }
   }
 
+  Future<void> showNotification() async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'audioId',
+      'AudioName',
+      importance: Importance.low,
+      priority: Priority.high,
+      showWhen: false,
+      vibrationPattern: null, // Remove vibrations
+      enableVibration: false, // Ensure vibration is disabled
+      ongoing: true, // Make notification non-dismissible
+    );
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    // Assume shuffledSongs and currentIndex are initialized correctly
+    final song = shuffledSongs[currentIndex];
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'Now Playing',
+      song.title,
+      platformChannelSpecifics,
+      payload: 'item x',
+    );
+  }
+
+  void cancelNotification() async {
+    await flutterLocalNotificationsPlugin.cancel(0);
+  }
+
   void seekAudio(double value) {
     final position = Duration(seconds: value.toInt());
     _audioPlayer.seek(position);
@@ -119,6 +157,7 @@ class _AudioPageState extends State<AudioPage> {
     });
     playAudio();
     art();
+    showNotification();
   }
 
   void previousSong() {
@@ -129,6 +168,7 @@ class _AudioPageState extends State<AudioPage> {
     });
     playAudio();
     art();
+    showNotification();
   }
 
   void shuffleSongs() {
