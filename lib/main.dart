@@ -16,6 +16,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Audio player',
       theme: ThemeData(
+        colorScheme: ColorScheme.fromSwatch().copyWith(
+          primary: Colors.redAccent,
+        ),
         fontFamily: 'Folks',
         useMaterial3: false,
       ),

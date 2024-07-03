@@ -189,125 +189,142 @@ class _AudioPageState extends State<AudioPage> {
       backgroundColor: Colors.black,
       body: Container(
         padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              height: 250,
-              width: 250,
-              decoration: BoxDecoration(
-                  image: image != null
-                      ? DecorationImage(
-                          image: MemoryImage(image!),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                  color: Colors.redAccent,
-                  shape: BoxShape.circle),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              shuffledSongs[currentIndex].title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
+        child: Stack(children: [
+          Positioned(
+            top: 20,
+            left: 0,
+            child: GestureDetector(
+              onTap: () {
+                // Handle back button tap here
+                Navigator.pop(context);
+              },
+              child: const Icon(
+                Icons.arrow_back_ios_rounded,
                 color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
+                size: 22,
               ),
             ),
-            const SizedBox(height: 5),
-            Text(
-              shuffledSongs[currentIndex].artist ?? 'Unknown Artist',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
+          ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                height: 250,
+                width: 250,
+                decoration: BoxDecoration(
+                    image: image != null
+                        ? DecorationImage(
+                            image: MemoryImage(image!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                    color: Colors.redAccent,
+                    shape: BoxShape.circle),
               ),
-            ),
-            const SizedBox(height: 10),
-            Slider(
-              activeColor: Colors.red,
-              inactiveColor: Colors.white,
-              value: position.inSeconds.toDouble(),
-              max: duration.inSeconds.toDouble(),
-              onChanged: seekAudio,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  formatDuration(position),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
+              const SizedBox(height: 10),
+              Text(
+                shuffledSongs[currentIndex].title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
                 ),
-                Text(
-                  formatDuration(duration),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                shuffledSongs[currentIndex].artist ?? 'Unknown Artist',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
                 ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                GestureDetector(
-                  onTap: shuffleSongs,
-                  child: Icon(
-                    Icons.shuffle_rounded,
-                    color: isShuffled ? Colors.red : Colors.white,
-                    size: 24,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: previousSong,
-                  child: const Icon(
-                    Icons.skip_previous_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: playPauseAudio,
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0xFFef3c39),
-                    ),
-                    child: Icon(
-                      isPlaying
-                          ? Icons.pause_rounded
-                          : Icons.play_arrow_rounded,
+              ),
+              const SizedBox(height: 10),
+              Slider(
+                activeColor: Colors.red,
+                inactiveColor: Colors.white,
+                value: position.inSeconds.toDouble(),
+                max: duration.inSeconds.toDouble(),
+                onChanged: seekAudio,
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    formatDuration(position),
+                    style: const TextStyle(
                       color: Colors.white,
-                      size: 40,
+                      fontSize: 14,
                     ),
                   ),
-                ),
-                GestureDetector(
-                  onTap: nextSong,
-                  child: const Icon(
-                    Icons.skip_next_rounded,
-                    color: Colors.white,
-                    size: 24,
+                  Text(
+                    formatDuration(duration),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-                GestureDetector(
-                  onTap: toggleReplayOnce,
-                  child: Icon(
-                    Icons.replay_rounded,
-                    color: isReplayOnce ? Colors.red : Colors.white,
-                    size: 24,
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: shuffleSongs,
+                    child: Icon(
+                      Icons.shuffle_rounded,
+                      color: isShuffled ? Colors.red : Colors.white,
+                      size: 24,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
-        ),
+                  GestureDetector(
+                    onTap: previousSong,
+                    child: const Icon(
+                      Icons.skip_previous_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: playPauseAudio,
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFFef3c39),
+                      ),
+                      child: Icon(
+                        isPlaying
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                        color: Colors.white,
+                        size: 40,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: nextSong,
+                    child: const Icon(
+                      Icons.skip_next_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: toggleReplayOnce,
+                    child: Icon(
+                      Icons.replay_rounded,
+                      color: isReplayOnce ? Colors.red : Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ]),
       ),
     );
   }

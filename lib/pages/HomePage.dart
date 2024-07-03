@@ -1,7 +1,8 @@
-import 'package:audio_player/pages/audioPage.dart';
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:permission_handler/permission_handler.dart';
+
+import 'audioPage.dart'; // Make sure to replace with your actual import
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,7 +14,9 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final OnAudioQuery _audioQuery = OnAudioQuery();
   List<SongModel> _songs = [];
+  List<SongModel> _filteredSongs = [];
   bool _loading = true;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -49,7 +52,19 @@ class _HomePageState extends State<HomePage> {
 
     setState(() {
       _songs = filteredSongs;
+      _filteredSongs = _songs; // Initialize filtered list with all songs
       _loading = false;
+    });
+  }
+
+  void _filterSongs(String searchText) {
+    searchText = searchText.toLowerCase();
+    setState(() {
+      _filteredSongs = _songs
+          .where((song) =>
+              song.title.toLowerCase().contains(searchText) ||
+              song.artist!.toLowerCase().contains(searchText))
+          .toList();
     });
   }
 
@@ -78,11 +93,14 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: TextField(
+                style: const TextStyle(color: Colors.white),
                 onTapOutside: (event) {
                   FocusManager.instance.primaryFocus?.unfocus();
                 },
+                controller: _searchController,
+                onChanged: _filterSongs,
                 decoration: const InputDecoration(
-                  hintText: "Search song..",
+                  hintText: "Search a song..",
                   hintStyle: TextStyle(color: Colors.grey),
                   prefixIcon: Icon(Icons.search, color: Colors.grey),
                   contentPadding: EdgeInsets.all(16),
@@ -93,11 +111,12 @@ class _HomePageState extends State<HomePage> {
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
                   : ListView.builder(
-                      itemCount: _songs.length,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: _filteredSongs.length,
                       itemBuilder: (context, index) {
-                        var song = _songs[index];
+                        var song = _filteredSongs[index];
                         return AudioBox(
-                          songs: _songs,
+                          songs: _filteredSongs,
                           currentIndex: index,
                         );
                       },
