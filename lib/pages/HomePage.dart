@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
-import 'audioPage.dart'; // Make sure to replace with your actual import
+import 'audioPage.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,40 +22,57 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _requestPermission();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    await _requestPermission();
+    await _scanAndListFiles();
   }
 
   Future<void> _requestPermission() async {
-    var status = await Permission.storage.request();
-    if (status.isGranted) {
-      _listFiles();
+    if (await _audioQuery.checkAndRequest()) {
+      // Permission granted, proceed with initialization
+      await _audioQuery.permissionsRequest();
     } else {
+      // Handle the case when permission is not granted
       setState(() {
         _loading = false;
       });
     }
   }
 
-  Future<void> _listFiles() async {
+  Future<void> _scanAndListFiles() async {
     setState(() {
       _loading = true;
     });
 
-    List<SongModel> songs = await _audioQuery.querySongs(
-      sortType: SongSortType.TITLE,
-      orderType: OrderType.ASC_OR_SMALLER,
-      uriType: UriType.EXTERNAL,
-      ignoreCase: true,
-    );
+    try {
+      // Trigger a media scan
+      await _audioQuery.scanMedia('/storage/emulated/0/');
 
-    List<SongModel> filteredSongs =
-        songs.where((song) => song.duration! > 60000).toList();
+      // Query songs after the scan
+      List<SongModel> songs = await _audioQuery.querySongs(
+        sortType: SongSortType.TITLE,
+        orderType: OrderType.ASC_OR_SMALLER,
+        uriType: UriType.EXTERNAL,
+        ignoreCase: true,
+      );
 
-    setState(() {
-      _songs = filteredSongs;
-      _filteredSongs = _songs; // Initialize filtered list with all songs
-      _loading = false;
-    });
+      List<SongModel> filteredSongs =
+          songs.where((song) => song.duration! > 60000).toList();
+
+      setState(() {
+        _songs = filteredSongs;
+        _filteredSongs = _songs;
+        _loading = false;
+      });
+    } catch (e) {
+      print("Error scanning and querying songs: $e");
+      setState(() {
+        _loading = false;
+      });
+    }
   }
 
   void _filterSongs(String searchText) {
@@ -84,9 +102,7 @@ class _HomePageState extends State<HomePage> {
                 fontSize: 20,
               ),
             ),
-            const SizedBox(
-              height: 15,
-            ),
+            const SizedBox(height: 15),
             Container(
               decoration: BoxDecoration(
                 color: const Color(0xFF1c1c1f),
@@ -107,23 +123,70 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
+            const SizedBox(height: 10),
             Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ListView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: _filteredSongs.length,
-                      itemBuilder: (context, index) {
-                        var song = _filteredSongs[index];
-                        return AudioBox(
-                          songs: _filteredSongs,
-                          currentIndex: index,
-                        );
-                      },
-                    ),
-            )
+              child: Skeletonizer(
+                enabled: _loading,
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(0),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  itemCount: _loading
+                      ? 10
+                      : _filteredSongs
+                          .length, // Show 10 skeleton items when loading
+                  itemBuilder: (context, index) {
+                    if (_loading) {
+                      return _buildSkeletonItem();
+                    }
+                    return AudioBox(
+                      songs: _filteredSongs,
+                      currentIndex: index,
+                    );
+                  },
+                ),
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonItem() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 200,
+                height: 15,
+                decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                width: 150,
+                height: 15,
+                decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -169,6 +232,12 @@ class AudioBox extends StatelessWidget {
                 decoration: const BoxDecoration(
                   color: Colors.redAccent,
                   shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.music_note,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),

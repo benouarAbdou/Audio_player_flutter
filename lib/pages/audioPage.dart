@@ -261,6 +261,15 @@ class _AudioPageState extends State<AudioPage> {
                         : null,
                     color: Colors.redAccent,
                     shape: BoxShape.circle),
+                child: Center(
+                  child: image == null
+                      ? const Icon(
+                          Icons.music_note,
+                          color: Colors.white,
+                          size: 100,
+                        )
+                      : Container(),
+                ),
               ),
               const SizedBox(height: 10),
               Text(
